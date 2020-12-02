@@ -12,16 +12,16 @@ function pidcontrol = pidcontrol(Testing_Time) %#ok<*STOUT>
 %Setting
 
 %PIDController for speed
-PIDController_Kp_Speed = 5; 
+PIDController_Kp_Speed = 0.5; 
 PIDController_Ti_Speed = 0; 
 PIDController_Td_Speed = 1;
 Target_RPM = 120;%A standard RPM of all motor 
 
 %PIDController for distance
-PIDController_Kp_Distance = 33; 
+PIDController_Kp_Distance = 0.05; 
 PIDController_Ti_Distance = 0; 
-PIDController_Td_Distance = 30;
-Target_Distance = 2000;%Distance unit is cm
+PIDController_Td_Distance = 0;
+Target_Distance = 200;%Distance unit is cm
 
 Gear_Ratio = 3;
 Wheel_Radius = 5*2;%unit is cm
@@ -62,38 +62,45 @@ Voltage_Graph = 0;
 Distance_Graph = 0;
 
 Time = 0;
-fre = 2;
+i = 2;
 %--------------------------------------------------------------------------
 
 %-----------------------Start PIDControl of Speed----------------------
 %use "for" is for the testing and record for the line graph
-for i = 1:Testing_Time
-    Error_RPM(i) = Target_RPM-Current_RPM;
-    Output_PWM_Speed = (PIDController_Kp_Speed*(Error_RPM(i)+SpeedController_Ki_Speed*sum(Error_RPM)+PIDController_Td_Speed*(Error_RPM(i)-Last_Error_RPM)))/Target_RPM;
-    Voltage_Graph(i) = Output_PWM_Speed;
-    Last_Error_RPM = Error_RPM(i);
-end 
+%for i = 1:Testing_Time
+%    Error_RPM(i) = Target_RPM-Current_RPM;
+%    Output_PWM_Speed = (PIDController_Kp_Speed*(Error_RPM(i)+SpeedController_Ki_Speed*sum(Error_RPM)+PIDController_Td_Speed*(Error_RPM(i)-Last_Error_RPM)))/Target_RPM;
+%    Voltage_Graph(i) = Output_PWM_Speed;
+%    Last_Error_RPM = Error_RPM(i);
+%end 
 %--------------------------------------------------------------------------
 
 %-----------------------Start PIDControl of Distance--------------------
 while(Testing_Time>=Time(length(Time)))
-    i = fre;
     tic;
+    Current_Distance = Distance_Graph(i-1);
     Error_Distance(i) = Target_Distance-Current_Distance;
-    Output_PWM_Distance = (PIDController_Kp_Distance*(Error_Distance(i)+SpeedController_Ki_Distance*sum(Error_Distance)+PIDController_Td_Distance*(Error_Distance(i)-Last_Error_Distance)))/Target_Distance;
-    Distance_Graph(i) = Wheel_Radius*pi*Output_PWM_Distance*Max_RPM*Gear_Ratio*toc/60+Last_Distance;
-    Current_Distance = Distance_Graph(i);
+    Output_PWM_Distance(i) = (PIDController_Kp_Distance*(Error_Distance(i)+SpeedController_Ki_Distance*sum(Error_Distance)+PIDController_Td_Distance*(Error_Distance(i)-Last_Error_Distance)))/Target_Distance;
+    if(Output_PWM_Distance(i)>1)
+        Output_PWM_Distance(i) = 1;
+    end
+    Distance_Graph(i) = Wheel_Radius*pi*Output_PWM_Distance(i)*Max_RPM*Gear_Ratio*toc/60+Last_Distance;
     Last_Distance = Distance_Graph(i);
     Last_Error_Distance = Error_Distance(i);
     Time(i) = Time(i-1)+toc;
-    fre = fre+1;
+    i = i+1;
 end 
 %--------------------------------------------------------------------------
 
 %---------------------------------End-------------------------------------
-x = 1:1:Testing_Time;
-y_voltage = Voltage_Graph(x);
-plot(x,y_voltage)
+figure(1)
+plot(Time,Output_PWM_Distance)
+xlabel("Time");
+ylabel("PWM");
+
+figure(2)
 plot(Time,Distance_Graph,'-r','LineWidth',0.01);
+xlabel("Time");
+ylabel("Distance");
 end
 %--------------------------------------------------------------------------
